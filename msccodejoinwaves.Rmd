@@ -1,0 +1,42 @@
+---
+title: "MSc Study Join Waves"
+author: "Hanna L Glandorf"
+date: "20 7 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## MSc Study Join Data Files
+The code here joins the two separate data files (wave 1, wave 2) from the data cleaning stage into one file for analysis.
+
+Objectives are:
+- 
+
+# Load libaries and import data
+```{r libaries and data}
+library(broom)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(lavaan)
+
+
+dat1 <- read_csv("wave1.csv")
+dat2 <- read_csv("wave2.csv")
+```
+
+# Join files from two waves into one
+```{r Join files}
+# select columns for analysis
+dat1 <- dat1 %>% select(u_id, id, age, gender, nationality, residence, lockdown_residence, lockdown_residence_diff, alone, other, colleagues, flatmates, partner, friends, family, interactions, sport, sport_type, complevel, plength, Q15_b, impact, effect, t1pss, t1pssf1, t1pssf2, t1fisi, t1deval, t1exh, t1accom, t1ties, t1centr, t1aff, t1bpssq, pss1w1, pss2w1, pss3w1, pss4w1, pss5w1, pss6w1, pss7w1, pss8w1, pss9w1, pss10w1, fisi1w1, fisi2w1, fisi3w1, fisi4w1, bpssq1w1, bpssq2w1, bpssq3w1, bpssq4w1, bpssq5w1, bpssq6w1, deval1w1, deval2w1, deval3w1, deval4w1, deval5w1, exh1w1, exh2w1, exh3w1, exh4w1, exh5w1, accom1w1, accom2w1, accom3w1, accom4w1, accom5w1)
+dat2 <- dat2 %>% select(u_id, t2pss, t2pssf1, t2pssf2, t2fisi, t2deval, t2exh, t2accom, t2ties, t2centr, t2aff, t2bpssq, pss1w2, pss2w2, pss3w2, pss4w2, pss5w2, pss6w2, pss7w2, pss8w2, pss9w2, pss10w2, fisi1w2, fisi2w2, fisi3w2, fisi4w2, bpssq1w2, bpssq2w2, bpssq3w2, bpssq4w2, bpssq5w2, bpssq6w2, deval1w2, deval2w2, deval3w2, deval4w2, deval5w2, exh1w2, exh2w2, exh3w2, exh4w2, exh5w2, accom1w2, accom2w2, accom3w2, accom4w2, accom5w2) 
+#join dataframes
+data <- inner_join(dat1, dat2, by = "u_id") %>% select(-u_id)
+```
+
+# Create data file
+```{r create file}
+write.csv(data, file = 'msc_ddata.csv')
+``` 

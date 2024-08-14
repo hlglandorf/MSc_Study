@@ -1,0 +1,473 @@
+---
+title: "MSc Study Wave 2 Wrangeling"
+author: "Hanna L Glandorf"
+date: "20 7 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## MSc Study Data Clean-up Wave 2
+The code here cleans up data that was downloaded from a survey on an online platform. The survey represents the second wave of data for this study.
+
+Objectives are:
+- correct column names in each data file
+- combine data files from the five orders
+- correct coding of each item
+- check internal consistency of each questionnaire
+- compute total scores for each questionnaire
+
+# Load libraries and import data
+```{r read-in}
+library(broom)
+library(tidyverse)
+library(ggplot2)
+library(psych) 
+
+
+w2o1 <- readxl::read_excel("wave2order1.xlsx") %>%
+  mutate(id = 1:23)
+w2o2 <- readxl::read_excel("wave2order2.xlsx") %>%
+  mutate(id = 24:34)
+w2o3 <- readxl::read_excel("wave2order3.xlsx") %>%
+  mutate(id = 35:51)
+w2o4 <- readxl::read_excel("wave2order4.xlsx") %>%
+  mutate(id = 52:68)
+w2o5 <- readxl::read_excel("wave2order5.xlsx") %>%
+  mutate(id = 69:95)
+```
+
+Order 1 (for reference):
+- Q2_1-Q2_5 devaluation
+- Q3_1-3_10 ABQ rest (exhaustion and reduced sense of accomplishment)
+- Q4_1-4_10 PSS (stress)
+- Q5_1-5_9 SIQS (team identification; three-dimensional)
+- Q6_1-6_6 BPSSQ (perceived social support)
+- Q7_1-7_4 FISI (team identification; one-dimensional)
+- Q8 unique identifier
+```{r selection}
+w2o1_s <- w2o1 %>% select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q3_7, Q3_8, Q3_9, Q3_10, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q4_6, Q4_7, Q4_8, Q4_9, Q4_10, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q5_7, Q5_8, Q5_9, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q6_6, Q7_1, Q7_2, Q7_3, Q7_4, Q8)
+
+w2o1_s <- w2o1_s %>% rename(deval1w2 = Q2_1, #devaluation
+                            deval2w2 = Q2_2,
+                            deval3w2 = Q2_3,
+                            deval4w2 = Q2_4,
+                            deval5w2 = Q2_5,
+                            exh1w2 = Q3_2, #exhaustion
+                            exh2w2 = Q3_3,
+                            exh3w2 = Q3_6,
+                            exh4w2 = Q3_7,
+                            exh5w2 = Q3_8,
+                            accom1w2 = Q3_1, #reduced sense of accomplishment
+                            accom2w2 = Q3_4,
+                            accom3w2 = Q3_5,
+                            accom4w2 = Q3_9,
+                            accom5w2 = Q3_10,
+                            pss1w2 = Q4_1, #perceived stress
+                            pss2w2 = Q4_2,
+                            pss3w2 = Q4_3,
+                            pss4w2 = Q4_4,
+                            pss5w2 = Q4_5,
+                            pss6w2 = Q4_6,
+                            pss7w2 = Q4_7,
+                            pss8w2 = Q4_8,
+                            pss9w2 = Q4_9,
+                            pss10w2 = Q4_10,
+                            fisi1w2 = Q7_1, #team identification
+                            fisi2w2 = Q7_2,
+                            fisi3w2 = Q7_3,
+                            fisiw2 = Q7_4,
+                            bpssq1w2 = Q6_1, #perceived social support
+                            bpssq2w2 = Q6_2,
+                            bpssq3w2 = Q6_3,
+                            bpssq4w2 = Q6_4,
+                            bpssq5w2 = Q6_5,
+                            bpssq6w2 = Q6_6,
+                            ties1w2 = Q5_1, #team identification (first dimension)
+                            ties2w2 = Q5_2,
+                            ties3w2 = Q5_3,
+                            centr1w2 = Q5_4, #team identification (second dimension)
+                            centr2w2 = Q5_5,
+                            centr3w2 = Q5_6,
+                            aff1w2 = Q5_7, #team identification (third dimension)
+                            aff2w2 = Q5_8,
+                            aff3w2 = Q5_9,
+                            u_id = Q8)
+```
+
+Order 2 (for reference):
+- Q2 = PSS
+- Q3 = devaluation
+- Q4 = exhaustion and red accomplishments
+- Q5 = BPSSQ
+- Q6 = SIQS
+- Q7 = FISI
+- Q8 = identifier
+```{r}
+w2o2_s <- w2o2 %>% select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q2_6, Q2_7, Q2_8, Q2_9, Q2_10, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q4_6, Q4_7, Q4_8, Q4_9, Q4_10, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q6_6, Q6_7, Q6_8, Q6_9, Q7_1, Q7_2, Q7_3, Q7_4, Q8)
+
+w2o2_s <- w2o2_s %>% rename(deval1w2 = Q3_1,
+                            deval2w2 = Q3_2,
+                            deval3w2 = Q3_3,
+                            deval4w2 = Q3_4,
+                            deval5w2 = Q3_5,
+                            exh1w2 = Q4_2,
+                            exh2w2 = Q4_3,
+                            exh3w2 = Q4_6,
+                            exh4w2 = Q4_7,
+                            exh5w2 = Q4_8,
+                            accom1w2 = Q4_1,
+                            accom2w2 = Q4_4,
+                            accom3w2 = Q4_5,
+                            accom4w2 = Q4_9,
+                            accom5w2 = Q4_10,
+                            pss1w2 = Q2_1,
+                            pss2w2 = Q2_2,
+                            pss3w2 = Q2_3,
+                            pss4w2 = Q2_4,
+                            pss5w2 = Q2_5,
+                            pss6w2 = Q2_6,
+                            pss7w2 = Q2_7,
+                            pss8w2 = Q2_8,
+                            pss9w2 = Q2_9,
+                            pss10w2 = Q2_10,
+                            fisi1w2 = Q7_1,
+                            fisi2w2 = Q7_2,
+                            fisi3w2 = Q7_3,
+                            fisi4w2 = Q7_4,
+                            bpssq1w2 = Q5_1,
+                            bpssq2w2 = Q5_2,
+                            bpssq3w2 = Q5_3,
+                            bpssq4w2 = Q5_4,
+                            bpssq5w2 = Q5_5,
+                            bpssq6w2 = Q5_6,
+                            ties1w2 = Q6_1,
+                            ties2w2 = Q6_2,
+                            ties3w2 = Q6_3,
+                            centr1w2 = Q6_4,
+                            centr2w2 = Q6_5,
+                            centr3w2 = Q6_6,
+                            aff1w2 = Q6_7,
+                            aff2w2 = Q6_8,
+                            aff3w2 = Q6_9,
+                            u_id = Q8)
+```
+
+Order 3 (for reference):
+- Q2 = SIQS
+- Q3 = BPSSQ
+- Q4 = devaluation
+- Q5 = red accomplishments and exhaustion
+- Q6 = FISI
+- Q7 = PSS
+- Q8 = unique identifier
+```{r}
+w2o3_s <- w2o3 %>% select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q2_6, Q2_7, Q2_8, Q2_9, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q5_7, Q5_8, Q5_9, Q5_10, Q6_1, Q6_2, Q6_3, Q6_4, Q7_1, Q7_2, Q7_3, Q7_4, Q7_5, Q7_6, Q7_7, Q7_8, Q7_9, Q7_10, Q8)
+
+w2o3_s <- w2o3_s %>% rename(deval1w2 = Q4_1,
+                            deval2w2 = Q4_2,
+                            deval3w2 = Q4_3,
+                            deval4w2 = Q4_4,
+                            deval5w2 = Q4_5,
+                            exh1w2 = Q5_2,
+                            exh2w2 = Q5_3,
+                            exh3w2 = Q5_6,
+                            exh4w2 = Q5_7,
+                            exh5w2 = Q5_8,
+                            accom1w2 = Q5_1,
+                            accom2w2 = Q5_4,
+                            accom3w2 = Q5_5,
+                            accom4w2 = Q5_9,
+                            accom5w2 = Q5_10,
+                            pss1w2 = Q7_1,
+                            pss2w2 = Q7_2,
+                            pss3w2 = Q7_3,
+                            pss4w2 = Q7_4,
+                            pss5w2 = Q7_5,
+                            pss6w2 = Q7_6,
+                            pss7w2 = Q7_7,
+                            pss8w2 = Q7_8,
+                            pss9w2 = Q7_9,
+                            pss10w2 = Q7_10,
+                            fisi1w2 = Q6_1,
+                            fisi2w2 = Q6_2,
+                            fisi3w2 = Q6_3,
+                            fisi4w2 = Q6_4,
+                            bpssq1w2 = Q3_1,
+                            bpssq2w2 = Q3_2,
+                            bpssq3w2 = Q3_3,
+                            bpssq4w2 = Q3_4,
+                            bpssq5w2 = Q3_5,
+                            bpssq6w2 = Q3_6,
+                            ties1w2 = Q2_1,
+                            ties2w2 = Q2_2,
+                            ties3w2 = Q2_3,
+                            centr1w2 = Q2_4,
+                            centr2w2 = Q2_5,
+                            centr3w2 = Q2_6,
+                            aff1w2 = Q2_7,
+                            aff2w2 = Q2_8,
+                            aff3w2 = Q2_9,
+                            u_id = Q8)
+```
+
+Order 4 (for reference):
+- Q2 = BPSSQ
+- Q3 = PSS
+- Q4 = FISI
+- Q5 = devaluation
+- Q6 = accom and exhaustion
+- Q7 = SIQS (missing item 4)
+- Q8 = identifier
+```{r}
+w2o4_s <- w2o4 %>% select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q2_6, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q3_7, Q3_8, Q3_9, Q3_10, Q4_1, Q4_2, Q4_3, Q4_4, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q6_6, Q6_7, Q6_8, Q6_8, Q6_9, Q6_10, Q7_1, Q7_2, Q7_3, Q7_4, Q7_5, Q7_6, Q7_7, Q7_8, Q7_9, Q8)
+
+w2o4_s <- w2o4_s %>% rename(deval1w2 = Q5_1,
+                            deval2w2 = Q5_2,
+                            deval3w2 = Q5_3,
+                            deval4w2 = Q5_4,
+                            deval5w2 = Q5_5,
+                            exh1w2 = Q6_2,
+                            exh2w2 = Q6_3,
+                            exh3w2 = Q6_6,
+                            exh4w2 = Q6_7,
+                            exh5w2 = Q6_8,
+                            accom1w2 = Q6_1,
+                            accom2w2 = Q6_4,
+                            accom3w2 = Q6_5,
+                            accom4w2 = Q6_9,
+                            accom5w2 = Q6_10,
+                            pss1w2 = Q3_1,
+                            pss2w2 = Q3_2,
+                            pss3w2 = Q3_3,
+                            pss4w2 = Q3_4,
+                            pss5w2 = Q3_5,
+                            pss6w2 = Q3_6,
+                            pss7w2 = Q3_7,
+                            pss8w2 = Q3_8,
+                            pss9w2 = Q3_9,
+                            pss10w2 = Q3_10,
+                            fisi1w2 = Q4_1,
+                            fisi2w2 = Q4_2,
+                            fisi3w2 = Q4_3,
+                            fisi4w2 = Q4_4,
+                            bpssq1w2 = Q2_1,
+                            bpssq2w2 = Q2_2,
+                            bpssq3w2 = Q2_3,
+                            bpssq4w2 = Q2_4,
+                            bpssq5w2 = Q2_5,
+                            bpssq6w2 = Q2_6,
+                            ties1w2 = Q7_1,
+                            ties2w2 = Q7_2,
+                            ties3w2 = Q7_3,
+                            centr1w2 = Q7_4,
+                            centr2w2 = Q7_5,
+                            centr3w2 = Q7_6,
+                            aff1w2 = Q7_7,
+                            aff2w2 = Q7_8,
+                            aff3w2 = Q7_9,
+                            u_id = Q8)
+```
+
+Order 5 (for reference):
+- Q2 = FISI
+- Q3 = BPSSQ
+- Q4 = PSS
+- Q5 = SIQS
+- Q6 = devaluation
+- Q7 = red accomplishment and exhaustion
+- Q8 = unique identifier
+```{r}
+w2o5_s <- w2o5 %>% select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q4_6, Q4_7, Q4_8, Q4_9, Q4_10, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q5_7, Q5_8, Q5_9, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q7_1, Q7_2, Q7_3, Q7_4, Q7_5, Q7_6, Q7_7, Q7_8, Q7_9, Q7_10, Q8)
+
+w2o5_s <- w2o5_s %>% rename(deval1w2 = Q6_1,
+                            deval2w2 = Q6_2,
+                            deval3w2 = Q6_3,
+                            deval4w2 = Q6_4,
+                            deval5w2 = Q6_5,
+                            exh1w2 = Q7_2,
+                            exh2w2 = Q7_3,
+                            exh3w2 = Q7_6,
+                            exh4w2 = Q7_7,
+                            exh5w2 = Q7_8,
+                            accom1w2 = Q7_1,
+                            accom2w2 = Q7_4,
+                            accom3w2 = Q7_5,
+                            accom4w2 = Q7_9,
+                            accom5w2 = Q7_10,
+                            pss1w2 = Q4_1,
+                            pss2w2 = Q4_2,
+                            pss3w2 = Q4_3,
+                            pss4w2 = Q4_4,
+                            pss5w2 = Q4_5,
+                            pss6w2 = Q4_6,
+                            pss7w2 = Q4_7,
+                            pss8w2 = Q4_8,
+                            pss9w2 = Q4_9,
+                            pss10w2 = Q4_10,
+                            fisi1w2 = Q2_1,
+                            fisi2w2 = Q2_2,
+                            fisi3w2 = Q2_3,
+                            fisi4w2 = Q2_4,
+                            bpssq1w2 = Q3_1,
+                            bpssq2w2 = Q3_2,
+                            bpssq3w2 = Q3_3,
+                            bpssq4w2 = Q3_4,
+                            bpssq5w2 = Q3_5,
+                            bpssq6w2 = Q3_6,
+                            ties1w2 = Q5_1,
+                            ties2w2 = Q5_2,
+                            ties3w2 = Q5_3,
+                            centr1w2 = Q5_4,
+                            centr2w2 = Q5_5,
+                            centr3w2 = Q5_6,
+                            aff1w2 = Q5_7,
+                            aff2w2 = Q5_8,
+                            aff3w2 = Q5_9,
+                            u_id = Q8)
+```
+
+# Correct coding of items (e.g., reverse coding)
+```{r}
+datcomb2 <- bind_rows(w2o1_s, w2o2_s, w2o3_s, w2o4_s, w2o5_s)
+## correct coding
+datcomb2 <- datcomb2 %>% mutate(deval1w2 = recode(deval1w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                deval2w2 = recode(deval2w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                deval3w2 = recode(deval3w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                deval4w2 = recode(deval4w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                deval5w2 = recode(deval5w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                exh1w2 = recode(exh1w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                exh2w2 = recode(exh2w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                exh3w2 = recode(exh3w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                exh4w2 = recode(exh4w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                exh5w2 = recode(exh5w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                accom1w2 = recode(accom1w2, "6" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                accom2w2 = recode(accom2w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                accom3w2 = recode(accom3w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                accom4w2 = recode(accom4w2, "6" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                accom5w2 = recode(accom5w2, "6" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                pss1w2 = recode(pss1w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                pss2w2 = recode(pss2w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                pss3w2 = recode(pss3w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                pss4w2 = recode(pss4w2, "1"=4, "2"=3, "3"=2, "4"=1, "5"=0),
+                pss5w2 = recode(pss5w2, "1"=4, "2"=3, "3"=2, "4"=1, "5"=0),
+                pss6w2 = recode(pss6w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                pss7w2 = recode(pss7w2, "1"=4, "2"=3, "3"=2, "4"=1, "5"=0),
+                pss8w2 = recode(pss8w2, "1"=4, "2"=3, "3"=2, "4"=1, "5"=0),
+                pss9w2 = recode(pss9w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4),
+                pss10w2 = recode(pss10w2, "1"=0, "2"=1, "3"=2, "4"=3, "5"=4))
+##convert to numeric
+datcomb2$exh1w2 <- as.numeric(as.character(datcomb2$exh1w2))
+datcomb2$exh2w2 <- as.numeric(as.character(datcomb2$exh2w2))
+datcomb2$exh3w2 <- as.numeric(as.character(datcomb2$exh3w2))
+datcomb2$exh4w2 <- as.numeric(as.character(datcomb2$exh4w2))
+datcomb2$exh5w2 <- as.numeric(as.character(datcomb2$exh5w2))
+
+datcomb2$accom1w2 <- as.numeric(as.character(datcomb2$accom1w2))
+datcomb2$accom2w2 <- as.numeric(as.character(datcomb2$accom2w2))
+datcomb2$accom3w2 <- as.numeric(as.character(datcomb2$accom3w2))
+datcomb2$accom4w2 <- as.numeric(as.character(datcomb2$accom4w2))
+datcomb2$accom5w2 <- as.numeric(as.character(datcomb2$accom5w2))
+
+datcomb2$ties1w2 <- as.numeric(as.character(datcomb2$ties1w2))
+datcomb2$ties2w2 <- as.numeric(as.character(datcomb2$ties2w2))
+datcomb2$ties3w2 <- as.numeric(as.character(datcomb2$ties3w2))
+
+datcomb2$centr1w2 <- as.numeric(as.character(datcomb2$centr1w2))
+datcomb2$centr2w2 <- as.numeric(as.character(datcomb2$centr2w2))
+datcomb2$centr3w2 <- as.numeric(as.character(datcomb2$centr3w2))
+
+datcomb2$aff1w2 <- as.numeric(as.character(datcomb2$aff1w2))
+datcomb2$aff2w2 <- as.numeric(as.character(datcomb2$aff2w2))
+datcomb2$aff3w2 <- as.numeric(as.character(datcomb2$aff3w2))
+
+datcomb2$bpssq1w2 <- as.numeric(as.character(datcomb2$bpssq1w2))
+datcomb2$bpssq2w2 <- as.numeric(as.character(datcomb2$bpssq2w2))
+datcomb2$bpssq3w2 <- as.numeric(as.character(datcomb2$bpssq3w2))
+datcomb2$bpssq4w2 <- as.numeric(as.character(datcomb2$bpssq4w2))
+datcomb2$bpssq5w2 <- as.numeric(as.character(datcomb2$bpssq5w2))
+datcomb2$bpssq6w2 <- as.numeric(as.character(datcomb2$bpssq6w2))
+
+datcomb2$fisi1w2 <- as.numeric(as.character(datcomb2$fisi1w2))
+datcomb2$fisi2w2 <- as.numeric(as.character(datcomb2$fisi2w2))
+datcomb2$fisi3w2 <- as.numeric(as.character(datcomb2$fisi3w2))
+datcomb2$fisi4w2 <- as.numeric(as.character(datcomb2$fisi4w2))
+```
+
+# Check for internal consistency
+Check internal consistency with Cronbach's alpha.
+```{r}
+##pss
+pss_alpha <- datcomb2 %>% dplyr::select(pss1w2, pss2w2, pss3w2, pss4w2, pss5w2, pss6w2, pss7w2, pss8w2, pss9w2, pss10w2)
+alpha(pss_alpha[,1:10], check.keys = F)
+
+##abq
+deval_alpha <- datcomb2 %>% dplyr::select(deval1w2, deval2w2, deval3w2, deval4w2, deval5w2)
+alpha(deval_alpha[,1:5], check.keys = F)
+
+exh_alpha <- datcomb2 %>% dplyr::select(exh1w2, exh2w2, exh3w2, exh4w2, exh5w2)
+alpha(exh_alpha[,1:5], check.keys = F)
+
+accom_alpha <- datcomb2 %>% dplyr::select(accom1w2, accom2w2, accom3w2, accom4w2, accom5w2)
+alpha(accom_alpha[,1:5], check.keys = T) ##item 1 and 5 negatively correlated with scale, covid context?
+
+##fisi
+fisi_alpha <- datcomb2 %>% dplyr::select(fisi1w2, fisi2w2, fisi3w2, fisi4w2)
+alpha(fisi_alpha[,1:4], check.keys = F)
+
+##bpssq
+bpssq_alpha <- datcomb2 %>% dplyr::select(bpssq1w2, bpssq2w2, bpssq3w2, bpssq4w2, bpssq5w2, bpssq6w2)
+alpha(bpssq_alpha[,1:6], check.keys = F)
+
+##ssiq
+ties_alpha <- datcomb2 %>% dplyr::select(ties1w2, ties2w2, ties3w2)
+alpha(ties_alpha[,1:3], check.keys = F)
+
+centr_alpha <- datcomb2 %>% dplyr::select(centr1w2, centr2w2, centr3w2)
+alpha(centr_alpha[,1:3], check.keys = F)
+
+aff_alpha <- datcomb2 %>% dplyr::select(aff1w2, aff2w2, aff3w2)
+alpha(aff_alpha[,1:3], check.keys = F)
+
+#apart from reduced sense of accomplishment, all other scales meet alpha = 0.7
+```
+
+# Check use of burnout items
+Checking whether participants completed the exhaustion and reduced sense of accomplishment items. This was done, because we were unsure how relevant these items would be in the COVID-19 context.
+```{r}
+datcomb2 %>% group_by(exh1w2) %>% summarise(n())
+datcomb2 %>% group_by(exh2w2) %>% summarise(n())
+datcomb2 %>% group_by(exh3w2) %>% summarise(n())
+datcomb2 %>% group_by(exh4w2) %>% summarise(n())
+datcomb2 %>% group_by(exh5w2) %>% summarise(n())
+
+datcomb2 %>% group_by(accom1w2) %>% summarise(n())
+datcomb2 %>% group_by(accom2w2) %>% summarise(n())
+datcomb2 %>% group_by(accom3w2) %>% summarise(n())
+datcomb2 %>% group_by(accom4w2) %>% summarise(n())
+datcomb2 %>% group_by(accom5w2) %>% summarise(n())
+```
+
+# Compute total scores for each questionnaire
+```{r}
+
+datcomb2_c <- mutate(datcomb2, t2pss = pss1w2+pss2w2+pss3w2+pss4w2+pss5w2+pss6w2+pss7w2+pss8w2+pss9w2+pss10w2,
+                     t2pssf1 = pss1w2+pss2w2+pss3w2+pss6w2+pss9w2+pss10w2,
+                     t2pssf2 = pss4w2+pss5w2+pss7w2+pss8w2,
+               t2fisi = fisi1w2+fisi2w2+fisi3w2+fisi4w2,
+               t2deval = (deval1w2+deval2w2+deval3w2+deval4w2+deval5w2)/5,
+               t2exh = (exh1w2+exh2w2+exh3w2+exh4w2+exh5w2)/5,
+               t2accom = (accom1w2+accom2w2+accom3w2+accom4w2+accom5w2)/5, ##item 1 and 5 were removed to achieve alpha of 0.86
+               t2ties = (ties1w2+ties2w2+ties3w2)/3,
+               t2centr = (centr1w2+centr2w2+centr3w2)/3,
+               t2aff = (aff1w2+aff2w2+aff3w2)/3,
+               t2bpssq = bpssq1w2+bpssq2w2+bpssq3w2+bpssq4w2+bpssq5w2+bpssq6w2)
+
+```
+
+# Create cleaned data file
+```{r}
+write.csv(datcomb2_c, file = 'wave2.csv')
+```

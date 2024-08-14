@@ -1,0 +1,684 @@
+---
+title: "MSc Study Analysis"
+author: "Hanna L Glandorf"
+date: "10 6 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## MSc Study Statistical Analysis
+The code here analyses the data for demographic information provided by participants as well as descriptive statistics for each questionnaire and carried out a mediation analysis. 
+
+Objectives are:
+- determining demographic information from participants
+- calculating descriptive statistics for each questionnaire
+- data visualisaion for assumption checks (e.g., normality of data distribution)
+- calculating correlations
+- checking measurement models of each questionnaire (e.g., dimensionality of questionnaires) and reliability (e.g., omega calculation)
+- mediational analysis of data
+- exploration of the data
+
+# Load libraries and import data
+```{r}
+library(broom)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(lavaan)
+library(semPlot)
+library(semTools)
+#loading libraries for exploratory analyses
+library(MASS)
+library(sfsmisc)
+
+data1 <- read_csv("msc_ddata.csv") 
+``` 
+
+# Analyse for demographic information
+```{r}
+# Age
+data1 %>% filter(!is.na(age)) %>%
+  summarise(mean(age), sd(age), min(age), max(age), n())
+# Gender
+data1 %>% group_by(gender) %>% summarise(n())
+# Nationality
+data1 %>% group_by(nationality) %>% summarise(n())
+# Residence
+data1 %>% group_by(residence) %>% summarise(n())
+# Residence during lockdown
+data1 %>% group_by(lockdown_residence) %>% summarise(n())
+# Whether had to move residence during/for lockdown
+data1 %>% group_by(lockdown_residence_diff) %>% summarise(n()) ##0=no
+# Number of participants playing different sports
+data1 %>% group_by(sport) %>% summarise(n())
+# Competition level
+data1 %>% group_by(complevel) %>% summarise(n()) ##0 is international
+# Length of participation in sport
+data1 %>% filter(!is.na(plength)) %>%
+  summarise(mean(plength), sd(plength), min(plength), max(plength), n()) 
+# Whether they want to go back to competitng at same level after lockdown
+data1 %>% group_by(Q15_b) %>% summarise (n()) ##1= yes, want to go back to previous competition level
+# impact of lockdown on sport
+data1 %>% filter(!is.na(impact)) %>%
+  summarise(mean(impact), sd(impact), min(impact), max(impact), n())
+# What lockdown impacted the most
+data1 %>% group_by(effect)%>% summarise(n()) ##3= training, 2=competition, 1=both
+
+# Who participants spent lockdown with
+data1 %>% group_by(friends) %>% summarise(n())
+data1 %>% group_by(family) %>% summarise(n())
+data1 %>% group_by(flatmates) %>% summarise(n())
+data1 %>% group_by(partner) %>% summarise(n())
+data1 %>% group_by(alone) %>% summarise(n())
+data1 %>% group_by(other) %>% summarise(n())
+data1 %>% group_by(colleagues) %>% summarise(n())
+
+# Whether they interacted more or less with others
+data1 %>% filter(!is.na(interactions)) %>%
+  summarise(mean(interactions), sd(interactions), min(interactions), max(interactions), n()) ##0 = a lot less 
+# Number of participants with individual vs. team sport
+data1 %>% group_by(sport_type) %>% summarise(n())
+```
+
+# General descriptive statistics: Wave 1 
+Calculating trimmed mean (20%), standard devisions, minima, maxima, mads for descriptive statistics here. Trimmed means and mads are used here for more robust estimation of central tendency and spread.
+```{r}
+##perceived stress
+data1 %>% filter(!is.na(t1pss)) %>%
+  summarise(mean(t1pss, tr=.2), sd(t1pss), min(t1pss), max(t1pss), n())
+mad(data1$t1pss) 
+data1 %>% group_by(complevel) %>% summarise(mean(t1pss, tr=.2), sd(t1pss), min(t1pss), max(t1pss), n())
+
+data1 %>% filter(!is.na(t1pssf1)) %>%
+  summarise(mean(t1pssf1, tr=.2), sd(t1pssf1), min(t1pssf1), max(t1pssf1), n())
+mad(data1$t1pssf1) 
+data1 %>% group_by(complevel) %>% summarise(mean(t1pssf1, tr=.2), sd(t1pssf1), min(t1pssf1), max(t1pssf1), n())
+
+data1 %>% filter(!is.na(t1pssf2)) %>%
+  summarise(mean(t1pssf2, tr=.2), sd(t1pssf2), min(t1pssf2), max(t1pssf2), n())
+mad(data1$t1pssf2) 
+data1 %>% group_by(complevel) %>% summarise(mean(t1pssf2, tr=.2), sd(t1pssf2), min(t1pssf2), max(t1pssf2), n())
+
+##fisi (team identification)
+data1 %>% filter(!is.na(t1fisi)) %>%
+  summarise(mean(t1fisi, tr=.2), sd(t1fisi), min(t1fisi), max(t1fisi), n())
+mad(data1$t1fisi)
+data1 %>% group_by(complevel) %>% summarise(mean(t1fisi, tr=.2), sd(t1fisi), min(t1fisi), max(t1fisi), n())
+
+##perceived social support
+data1 %>% filter(!is.na(t1bpssq)) %>%
+  summarise(mean(t1bpssq, tr=.2), sd(t1bpssq), min(t1bpssq), max(t1bpssq), n())
+mad(data1$t1bpssq)
+data1 %>% group_by(complevel) %>% summarise(mean(t1bpssq, tr=.2), sd(t1bpssq), min(t1bpssq), max(t1bpssq), n())
+
+##devaluation
+data1 %>% filter(!is.na(t1deval)) %>%
+  summarise(mean(t1deval, tr=.2), sd(t1deval), min(t1deval), max(t1deval), n())
+mad(data1$t1deval)
+data1 %>% group_by(complevel) %>% summarise(mean(t1deval, tr=.2), sd(t1deval), min(t1deval), max(t1deval), n())
+
+##exhaustion
+data1 %>% filter(!is.na(t1exh)) %>%
+  summarise(mean(t1exh, tr=.2), sd(t1exh), min(t1exh), max(t1exh), n())
+mad((data1%>% filter(!is.na(t1exh)))$t1exh)
+data1 %>% filter(!is.na(t1exh)) %>% group_by(complevel) %>% summarise(mean(t1exh, tr=.2), sd(t1exh), min(t1exh), max(t1exh), n())
+
+##reduced sense of accomplishments
+data1 %>% filter(!is.na(t1accom)) %>%
+  summarise(mean(t1accom, tr=.2), sd(t1accom), min(t1accom), max(t1accom), n())
+mad((data1%>% filter(!is.na(t1accom)))$t1accom)
+data1 %>% filter(!is.na(t1accom)) %>% group_by(complevel) %>% summarise(mean(t1accom, tr=.2), sd(t1accom), min(t1accom), max(t1accom), n())
+
+##siqs (team identification by dimension)
+##group ties
+data1 %>% filter(!is.na(t1ties)) %>%
+  summarise(mean(t1ties, tr=.2), sd(t1ties), min(t1ties), max(t1ties), n())
+mad(data1$t1ties)
+data1 %>% group_by(complevel) %>% summarise(mean(t1ties), sd(t1ties), min(t1ties), max(t1ties), n())
+
+##centrality
+data1 %>% filter(!is.na(t1centr)) %>%
+  summarise(mean(t1centr, tr=.2), sd(t1centr), min(t1centr), max(t1centr), n())
+mad(data1$t1centr)
+data1 %>% group_by(complevel) %>% summarise(mean(t1centr, tr=.2), sd(t1centr), min(t1centr), max(t1centr), n())
+
+##affect
+data1 %>% filter(!is.na(t1aff)) %>%
+  summarise(mean(t1aff, tr=.2), sd(t1aff), min(t1aff), max(t1aff), n())
+mad(data1$t1aff)
+data1 %>% group_by(complevel) %>% summarise(mean(t1aff, tr=.2), sd(t1aff), min(t1aff), max(t1aff), n())
+```
+
+# General descriptive statistics: Wave 2
+```{r}
+##perceived stress
+data1 %>% filter(!is.na(t2pss)) %>%
+  summarise(mean(t2pss, tr=.2), sd(t2pss), min(t2pss), max(t2pss), n())
+mad(data1$t2pss) 
+data1 %>% group_by(complevel) %>% summarise(mean(t2pss, tr=.2), sd(t2pss), min(t2pss), max(t2pss), n())
+
+data1 %>% filter(!is.na(t2pssf1)) %>%
+  summarise(mean(t2pssf1, tr=.2), sd(t2pssf1), min(t2pssf1), max(t2pssf1), n())
+mad(data1$t2pssf1) 
+data1 %>% group_by(complevel) %>% summarise(mean(t2pssf1, tr=.2), sd(t2pssf1), min(t2pssf1), max(t2pssf1), n())
+
+data1 %>% filter(!is.na(t2pssf2)) %>%
+  summarise(mean(t2pssf2, tr=.2), sd(t2pssf2), min(t2pssf2), max(t2pssf2), n())
+mad(data1$t2pssf2) 
+data1 %>% group_by(complevel) %>% summarise(mean(t2pssf2, tr=.2), sd(t2pssf2), min(t2pssf2), max(t2pssf2), n())
+
+##fisi (team identification)
+data1 %>% filter(!is.na(t2fisi)) %>%
+  summarise(mean(t2fisi, tr=.2), sd(t2fisi), min(t2fisi), max(t2fisi), n())
+mad(data1$t2fisi)
+data1 %>% group_by(complevel) %>% summarise(mean(t2fisi, tr=.2), sd(t2fisi), min(t2fisi), max(t2fisi), n())
+
+##perceived social support
+data1 %>% filter(!is.na(t2bpssq)) %>%
+  summarise(mean(t2bpssq, tr=.2), sd(t2bpssq), min(t2bpssq), max(t2bpssq), n())
+mad(data1$t2bpssq)
+data1 %>% group_by(complevel) %>% summarise(mean(t2bpssq, tr=.2), sd(t2bpssq), min(t2bpssq), max(t2bpssq), n())
+
+##devaluation
+data1 %>% filter(!is.na(t2deval)) %>%
+  summarise(mean(t2deval, tr=.2), sd(t2deval), min(t2deval), max(t2deval), n())
+mad(data1$t2deval)
+data1 %>% group_by(complevel) %>% summarise(mean(t2deval, tr=.2), sd(t2deval), min(t2deval), max(t2deval), n())
+
+##exhaustion
+data1 %>% filter(!is.na(t2exh)) %>%
+  summarise(mean(t2exh, tr=.2), sd(t2exh), min(t2exh), max(t2exh), n())
+mad((data1%>% filter(!is.na(t2exh)))$t2exh)
+data1 %>% filter(!is.na(t2exh)) %>% group_by(complevel) %>% summarise(mean(t2exh, tr=.2), sd(t2exh), min(t2exh), max(t2exh), n())
+
+##reduced sense of accomplishments
+data1 %>% filter(!is.na(t2accom)) %>%
+  summarise(mean(t2accom, tr=.2), sd(t2accom), min(t2accom), max(t2accom), n())
+mad((data1%>% filter(!is.na(t2accom)))$t2accom)
+data1 %>% filter(!is.na(t2accom)) %>% group_by(complevel) %>% summarise(mean(t2accom, tr=.2), sd(t2accom), min(t2accom), max(t2accom), n())
+
+##siqs (team identification by dimension)
+##group ties
+data1 %>% filter(!is.na(t2ties)) %>%
+  summarise(mean(t2ties, tr=.2), sd(t2ties), min(t2ties), max(t2ties), n())
+mad(data1$t2ties)
+data1 %>% group_by(complevel) %>% summarise(mean(t2ties), sd(t2ties), min(t2ties), max(t2ties), n())
+
+##centrality
+data1 %>% filter(!is.na(t2centr)) %>%
+  summarise(mean(t2centr, tr=.2), sd(t2centr), min(t2centr), max(t2centr), n())
+mad(data1$t2centr)
+data1 %>% group_by(complevel) %>% summarise(mean(t2centr, tr=.2), sd(t2centr), min(t2centr), max(t2centr), n())
+
+##affect
+data1 %>% filter(!is.na(t2aff)) %>%
+  summarise(mean(t2aff, tr=.2), sd(t2aff), min(t2aff), max(t2aff), n())
+mad(data1$t2aff)
+data1 %>% group_by(complevel) %>% summarise(mean(t2aff, tr=.2), sd(t2aff), min(t2aff), max(t2aff), n())
+```
+
+# Visualisations for assumption checks
+Checking distribution of the data to judge whether more robust statistics are required. 
+```{r}
+#Wave 1
+ggplot(data1, aes(t1fisi))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1pss))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1pssf1))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1pssf2))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1deval))+
+  geom_density()+
+  theme_bw()
+ggplot(data1, aes(t1exh))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1accom))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1bpssq))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1ties))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1centr))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t1aff))+
+  geom_density()+
+  theme_bw() 
+
+#Wave 2
+ggplot(data1, aes(t2fisi))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2pss))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2deval))+
+  geom_density()+
+  theme_bw()
+ggplot(data1, aes(t2exh))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2accom))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2bpssq))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2ties))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2centr))+
+  geom_density()+
+  theme_bw() 
+ggplot(data1, aes(t2aff))+
+  geom_density()+
+  theme_bw() 
+
+##skewness in the data, will require more robust statistics
+```
+
+# Correlations (via Spearman)
+```{r}
+##all Wave 1 variables
+cor.test(data1$t1fisi, data1$t1bpssq, method = "spearman") 
+cor.test(data1$t1fisi, data1$t1pssf1, method = "spearman")
+cor.test(data1$t1fisi, data1$t1pssf2, method = "spearman")
+cor.test(data1$t1fisi, data1$t1deval, method = "spearman") 
+cor.test(data1$t1fisi, data1$t1exh, method = "spearman")
+cor.test(data1$t1fisi, data1$t1accom, method = "spearman")
+
+cor.test(data1$t1bpssq, data1$t1pssf1, method = "spearman")
+cor.test(data1$t1bpssq, data1$t1pssf2, method = "spearman")
+cor.test(data1$t1bpssq, data1$t1deval, method = "spearman")
+cor.test(data1$t1bpssq, data1$t1exh, method = "spearman")
+cor.test(data1$t1bpssq, data1$t1accom, method = "spearman")
+
+cor.test(data1$t1pssf1, data1$t1deval, method = "spearman")
+cor.test(data1$t1pssf2, data1$t1deval, method = "spearman")
+cor.test(data1$t1pssf1, data1$t1exh, method = "spearman")
+cor.test(data1$t1pssf2, data1$t1exh, method = "spearman")
+cor.test(data1$t1pssf1, data1$t1accom, method = "spearman")
+cor.test(data1$t1pssf2, data1$t1accom, method = "spearman")
+
+cor.test(data1$t1exh, data1$t1deval, method = "spearman")
+cor.test(data1$t1exh, data1$t1accom, method = "spearman")
+
+cor.test(data1$t1accom, data1$t1deval, method = "spearman")
+
+##all Wave 2 variables
+cor.test(data1$t2fisi, data1$t2bpssq, method = "spearman") 
+cor.test(data1$t2fisi, data1$t2pssf1, method = "spearman")
+cor.test(data1$t2fisi, data1$t2pssf2, method = "spearman")
+cor.test(data1$t2fisi, data1$t2deval, method = "spearman") 
+cor.test(data1$t2fisi, data1$t2exh, method = "spearman")
+cor.test(data1$t2fisi, data1$t2accom, method = "spearman")
+
+cor.test(data1$t2bpssq, data1$t2pssf1, method = "spearman")
+cor.test(data1$t2bpssq, data1$t2pssf2, method = "spearman")
+cor.test(data1$t2bpssq, data1$t2deval, method = "spearman")
+cor.test(data1$t2bpssq, data1$t2exh, method = "spearman")
+cor.test(data1$t2bpssq, data1$t2accom, method = "spearman")
+
+cor.test(data1$t2pssf1, data1$t2deval, method = "spearman")
+cor.test(data1$t2pssf2, data1$t2deval, method = "spearman")
+cor.test(data1$t2pssf1, data1$t2exh, method = "spearman")
+cor.test(data1$t2pssf2, data1$t2exh, method = "spearman")
+cor.test(data1$t2pssf1, data1$t2accom, method = "spearman")
+cor.test(data1$t2pssf2, data1$t2accom, method = "spearman")
+
+cor.test(data1$t2exh, data1$t2deval, method = "spearman")
+cor.test(data1$t2exh, data1$t2accom, method = "spearman")
+
+cor.test(data1$t2accom, data1$t2deval, method = "spearman")
+
+##Wave 1 onto Wave 2
+cor.test(data1$t1fisi, data1$t2fisi, method = "spearman")
+cor.test(data1$t1fisi, data1$t2bpssq, method = "spearman") 
+cor.test(data1$t1fisi, data1$t2pssf1, method = "spearman")
+cor.test(data1$t1fisi, data1$t2pssf2, method = "spearman")
+cor.test(data1$t1fisi, data1$t2deval, method = "spearman") 
+cor.test(data1$t1fisi, data1$t2exh, method = "spearman")
+cor.test(data1$t1fisi, data1$t2accom, method = "spearman")
+
+cor.test(data1$t1bpssq, data1$t2fisi, method = "spearman")
+cor.test(data1$t1bpssq, data1$t2bpssq, method = "spearman")
+cor.test(data1$t1bpssq, data1$t2pssf1, method = "spearman")
+cor.test(data1$t1bpssq, data1$t2pssf2, method = "spearman")
+cor.test(data1$t1bpssq, data1$t2deval, method = "spearman")
+cor.test(data1$t1bpssq, data1$t2exh, method = "spearman")
+cor.test(data1$t1bpssq, data1$t2accom, method = "spearman")
+
+cor.test(data1$t1pssf1, data1$t2pssf1, method = "spearman")
+cor.test(data1$t1pssf1, data1$t2pssf2, method = "spearman")
+cor.test(data1$t1pssf2, data1$t2pssf2, method = "spearman")
+cor.test(data1$t1pssf1, data1$t2pssf1, method = "spearman")
+
+cor.test(data1$t1pssf1, data1$t2fisi, method = "spearman")
+cor.test(data1$t1pssf1, data1$t2bpssq, method = "spearman")
+
+cor.test(data1$t1pssf2, data1$t2fisi, method = "spearman")
+cor.test(data1$t1pssf2, data1$t2bpssq, method = "spearman")
+cor.test(data1$t1pssf2, data1$t2pssf1, method = "spearman")
+
+cor.test(data1$t1pssf1, data1$t2deval, method = "spearman")
+cor.test(data1$t1pssf2, data1$t2deval, method = "spearman")
+cor.test(data1$t1pssf1, data1$t2exh, method = "spearman")
+cor.test(data1$t1pssf2, data1$t2exh, method = "spearman")
+cor.test(data1$t1pssf1, data1$t2accom, method = "spearman")
+cor.test(data1$t1pssf2, data1$t2accom, method = "spearman")
+
+cor.test(data1$t1exh, data1$t2exh, method = "spearman")
+cor.test(data1$t1exh, data1$t2deval, method = "spearman")
+cor.test(data1$t1exh, data1$t2accom, method = "spearman")
+
+cor.test(data1$t1accom, data1$t2accom, method = "spearman")
+cor.test(data1$t1accom, data1$t2deval, method = "spearman")
+cor.test(data1$t1deval, data1$t2deval, method = "spearman")
+
+cor.test(data1$t1deval, data1$t2fisi, method = "spearman")
+cor.test(data1$t1deval, data1$t2bpssq, method = "spearman")
+cor.test(data1$t1deval, data1$t2pssf1, method = "spearman")
+cor.test(data1$t1deval, data1$t2pssf2, method = "spearman")
+cor.test(data1$t1deval, data1$t2exh, method = "spearman")
+cor.test(data1$t1deval, data1$t2accom, method = "spearman")
+
+cor.test(data1$t1exh, data1$t2fisi, method = "spearman")
+cor.test(data1$t1exh, data1$t2bpssq, method = "spearman")
+cor.test(data1$t1exh, data1$t2pssf1, method = "spearman")
+cor.test(data1$t1exh, data1$t2pssf2, method = "spearman")
+
+cor.test(data1$t1accom, data1$t2fisi, method = "spearman")
+cor.test(data1$t1accom, data1$t2bpssq, method = "spearman")
+cor.test(data1$t1accom, data1$t2pssf1, method = "spearman")
+cor.test(data1$t1accom, data1$t2pssf2, method = "spearman")
+cor.test(data1$t1accom, data1$t2exh, method = "spearman")
+
+cor.test(data1$t1pssf1, data1$t1pssf2, method = "spearman")
+cor.test(data1$t2pssf1, data1$t2pssf2, method = "spearman")
+```
+
+# Check the measurement model for each questionnaire
+```{r}
+##fisi (team identification)
+fisi <-'
+# measurement model
+teid =~ fisi1w1+fisi2w1+fisi3w1+fisi4w1
+'
+fit1 <- lavaan::sem(model = fisi, data = data1, estimator = "MLR", missing = "ml")
+
+##bpssq (perceived social support)
+bpssq <- '
+supp =~ bpssq1w1+bpssq2w1+bpssq3w1+bpssq4w1+bpssq5w1+bpssq6w1
+'
+fit2 <- lavaan::sem(model = bpssq, data = data1, estimator = "MLR", missing = "ml")
+
+##pss (perceived stress with two factors)
+pss1 <- '
+stre1 =~ pss1w1+pss2w1+pss3w1+pss6w1+pss9w1+pss10w1+pss4w1+pss5w1+pss7w1+pss8w1
+'
+fit31 <- lavaan::sem(model = pss1, data = data1, estimator = "MLR", missing = "ml")
+
+pss2 <- '
+stre1 =~ pss1w1+pss2w1+pss3w1+pss6w1+pss9w1+pss10w1
+stre2 =~ pss4w1+pss5w1+pss7w1+pss8w1
+'
+fit32 <- lavaan::sem(model = pss2, data = data1, estimator = "MLR", missing = "ml")
+
+##burnout (burnout with three dimensions)
+deval <- '
+deval =~ deval1w2+deval2w2+deval3w2+deval4w2+deval5w2
+'
+fit4 <- lavaan::sem(model = deval, data = data1, estimator = "MLR", missing = "ml")
+
+exh <- '
+exh =~ exh1w2+exh2w2+exh3w2+exh4w2+exh5w2
+'
+fit5 <- lavaan::sem(model = exh, data = data1, estimator = "MLR", missing = "ml") 
+
+accom <- '
+accom =~ accom1w2+accom2w2+accom3w2+accom4w2+accom5w2
+'
+fit61 <- lavaan::sem(model = accom, data = data1, estimator = "MLR", missing = "ml") 
+
+accom2 <- '
+accom =~ accom2w2+accom3w2+accom4w2
+'
+fit62 <- lavaan::sem(model = accom2, data = data1, estimator = "MLR", missing = "ml") # reduced sense of accomplishment had to be reduced due to internal consistency issues
+
+burn <- '
+deval =~ deval1w2+deval2w2+deval3w2+deval4w2+deval5w2
+exh =~ exh1w2+exh2w2+exh3w2+exh4w2+exh5w2
+accom =~ accom1w2+accom2w2+accom3w2+accom4w2+accom5w2
+burnout=~deval+exh+accom
+'
+fit7 <- lavaan::sem(model = burn, data = data1, estimator = "MLR", missing = "ml")
+
+##summaries of all measurement models
+summary(fit1, fit.measures=TRUE, rsquare = T, standardized = T) ##acceptable
+summary(fit2, fit.measures=TRUE, rsquare = T, standardized = T) ##acceptable
+summary(fit31, fit.measures=TRUE, rsquare = T, standardized = T)
+summary(fit32, fit.measures=TRUE, rsquare = T, standardized = T) ##better fit than the 1 factor solution: CFI and TLI acceptable, RMSEA and SRMR lower, AIC lower
+summary(fit4, fit.measures=TRUE, rsquare = T, standardized = T)##SRMR not so good, RMSEA bad, CFI just acceptable, TLI bad
+summary(fit5, fit.measures=TRUE, rsquare = T, standardized = T)##SRMR good, RMSEA bad, CFI acceptable, TLI just acceptable
+summary(fit61, fit.measures=TRUE, rsquare = T, standardized = T)##bad fit
+summary(fit62, fit.measures=TRUE, rsquare = T, standardized = T)##bad fit
+summary(fit7, fit.measures=TRUE, rsquare = T, standardized = T)##overall, not great fit indices, shows that the reduced sense of accomplishment dimension has some problems
+
+reliability(fit1)
+reliability(fit2)
+reliability(fit32)
+reliability(fit4)
+reliability(fit5)
+reliability(fit62)
+```
+
+# Preparing the data
+```{r}
+# z-scoring and dummy coding for competition level and sport type
+data2 <- data1%>%
+  mutate(t1pssf1 = scale(t1pssf1),
+         t1pssf2 = scale(t1pssf2),
+         t1fisi = scale(t1fisi),
+         t1bpssq = scale(t1bpssq),
+         tvi = if_else(sport_type == "team", 0.5, -0.5), ##team as reference
+         rvc = if_else(complevel == "2", 0.75, -0.25), ##regional vs club
+         nvc = if_else(complevel == "1", 0.75, -0.25), ##national vs. club
+         ivc = if_else(complevel == "0", 0.75, -0.25)) ##international vs. club
+```
+
+# Standard mediation model
+```{r model 1}
+set.seed(7)
+model <-'
+# measurement model
+teid =~ t1fisi
+supp =~ t1bpssq
+stre =~ t1pssf1 + t1pssf2
+burn =~ t2exh+t2deval+t2accom
+# equations
+supp ~ a1*teid
+stre ~ a2*teid + d21*supp
+burn ~ cp*teid + b1*supp + b2*stre 
+# indirect effect
+ind_eff := a1*d21*b2
+'
+# model doesn't identify when adding sport and competition level, so these have been removed
+fit <- lavaan::sem(model = model, data = data2, estimator = "MLR", missing = "ml")
+summary(fit, fit.measures=TRUE, rsquare = T) # evaluating model summary
+semPaths(fit, whatLabels = "par", layout="circle", structural = T, residuals = F, edge.label.cex = 1.5) # creating plot
+``` 
+
+# Alternative models: Separating burnout into its symptoms and controlling for baseline
+As the data is longitudinal, ideally, the outcome baseline scores should be controlled for (baseline bunrnout here). So, the models have been split into the different burnout symptoms and a control for baseline has been added.
+```{r model 2}
+set.seed(7)
+model1b <-'
+# measurement model
+teid =~ t1fisi
+supp =~ t1bpssq
+stre =~ t1pssf1 + t1pssf2
+burn1 =~ t1exh
+burn =~ t2exh
+# equations
+teid ~ burn1
+supp ~ a1*teid +burn1
+stre ~ a2*teid + d21*supp +burn1
+burn ~ cp*teid + b1*supp + b2*stre +burn1
+# indirect effect
+ind_eff := a1*d21*b2
+'
+fit11b <- lavaan::sem(model = model1b, data = data1, estimator = "MLR", missing = "ml") # data1 is used here, since lavaan offers standardised estimates without requiring z-scores
+summary(fit11b, fit.measures=TRUE, rsquare = T, standardized = T)
+semPaths(fit11b, whatLabels = "par", layout="circle", structural = T, residuals = F)
+parameterestimates(fit11b, standardized = T)
+
+set.seed(7)
+model2b <-'
+# measurement model
+teid =~ t1fisi
+supp =~ t1bpssq
+stre =~ t1pssf1 + t1pssf2
+burn1 =~ t1deval
+burn =~ t2deval
+# equations
+teid ~ burn1
+supp ~ a1*teid +burn1
+stre ~ a2*teid + d21*supp +burn1
+burn ~ cp*teid + b1*supp + b2*stre +burn1
+# indirect effect
+ind_eff := a1*d21*b2
+'
+fit12b <- lavaan::sem(model = model2b, data = data1, estimator = "MLR", missing = "ml")
+summary(fit12b, fit.measures=TRUE, rsquare = T, standardized = T)
+semPaths(fit12b, whatLabels = "par", layout="circle", structural = T, residuals = F)
+
+set.seed(7)
+model3 <-'
+# measurement model
+teid =~ t1fisi
+supp =~ t1bpssq
+stre =~ t1pssf1 + t1pssf2
+burn =~ t2accom
+burn1 =~ t1accom
+# equations
+teid ~ burn1
+supp ~ a1*teid +burn1
+stre ~ a2*teid + d21*supp +burn1
+burn ~ cp*teid + b1*supp + b2*stre +burn1
+# indirect effect
+ind_eff := a1*d21*b2
+'
+fit13 <- lavaan::sem(model = model3, data = data1, estimator = "MLR", missing = "ml")
+summary(fit13, fit.measures=TRUE, rsquare = T)
+semPaths(fit13, whatLabels = "par", layout="circle", structural = T, residuals = F)
+```
+
+# Final models
+Following examination above, final models are the exhaustion and devaluation model with baseline burnout as a control. This is because the reduced sense of accomplishment model was miss-specified. 
+```{r model 3}
+set.seed(7)
+model1c <-'
+# measurement model
+teid =~ t1fisi
+supp =~ t1bpssq
+stre =~ t2pssf1 + t2pssf2
+burn1 =~ t1exh
+burn =~ t2exh
+# equations
+teid ~ burn1
+supp ~ a1*teid +burn1
+stre ~ a2*teid + d21*supp +burn1
+burn ~ cp*teid + b1*supp + b2*stre +burn1
+# indirect effect
+ind_eff := a1*d21*b2
+'
+fit11c <- lavaan::sem(model = model1c, data = data1, estimator = "MLR", missing = "ml")
+summary(fit11c, fit.measures=TRUE, rsquare = T, standardized = T)
+semPaths(fit11c, whatLabels = "par", layout="circle", structural = T, residuals = F)
+
+set.seed(7)
+model2c <-'
+# measurement model
+teid =~ t1fisi
+supp =~ t1bpssq
+stre =~ t2pssf1 + t2pssf2
+burn1 =~ t1deval
+burn =~ t2deval
+# equations
+teid ~ burn1
+supp ~ a1*teid +burn1
+stre ~ a2*teid + d21*supp +burn1
+burn ~ cp*teid + b1*supp + b2*stre +burn1
+# indirect effect
+ind_eff := a1*d21*b2
+'
+fit12c <- lavaan::sem(model = model2c, data = data1, estimator = "MLR", missing = "ml")
+summary(fit12c, fit.measures=TRUE, rsquare = T, standardized = T)
+semPaths(fit12c, whatLabels = "par", layout="circle", structural = T, residuals = F)
+```
+
+# Exploring potential moderation 
+```{r}
+# using robust regression with huber's m-estimator to test for moderation effects
+# model for exhaustion
+rslm <- rlm(t2exh ~ t1fisi*t1bpssq*t1pssf1*t1pssf2+t1exh, data = data2, method = "M")
+f.robftest(rslm)
+f.robftest(rslm, var = "t1fisi")
+f.robftest(rslm, var = "t1bpssq")
+f.robftest(rslm, var = "t1pssf1")
+f.robftest(rslm, var = "t1pssf2")
+f.robftest(rslm, var = "t1exh")
+f.robftest(rslm, var = "t1fisi:t1bpssq")
+f.robftest(rslm, var = "t1fisi:t1pssf1")
+f.robftest(rslm, var = "t1fisi:t1pssf2")
+f.robftest(rslm, var = "t1bpssq:t1pssf1")
+f.robftest(rslm, var = "t1bpssq:t1pssf2")
+f.robftest(rslm, var = "t1fisi:t1pssf1:t1pssf2")
+f.robftest(rslm, var = "t1bpssq:t1pssf1:t1pssf2")
+f.robftest(rslm, var = "t1fisi:t1bpssq:t1pssf2")
+f.robftest(rslm, var = "t1fisi:t1bpssq:t1pssf1")
+f.robftest(rslm, var = "t1fisi:t1bpssq:t1pssf1:t1pssf2")
+
+# model for devaluation
+rslm2 <- rlm(t2deval ~ t1fisi*t1bpssq*t1pssf1*t1pssf2+t1deval, data = data2, method = "M")
+f.robftest(rslm2)
+f.robftest(rslm2, var = "t1fisi")
+f.robftest(rslm2, var = "t1bpssq")
+f.robftest(rslm2, var = "t1pssf1")
+f.robftest(rslm2, var = "t1pssf2")
+f.robftest(rslm2, var = "t1deval")
+f.robftest(rslm2, var = "t1fisi:t1bpssq")
+f.robftest(rslm2, var = "t1fisi:t1pssf1")
+f.robftest(rslm2, var = "t1fisi:t1pssf2")
+f.robftest(rslm2, var = "t1bpssq:t1pssf1")
+f.robftest(rslm2, var = "t1bpssq:t1pssf2")
+f.robftest(rslm2, var = "t1fisi:t1pssf1:t1pssf2")
+f.robftest(rslm2, var = "t1bpssq:t1pssf1:t1pssf2")
+f.robftest(rslm2, var = "t1fisi:t1bpssq:t1pssf2")
+f.robftest(rslm2, var = "t1fisi:t1bpssq:t1pssf1")
+f.robftest(rslm2, var = "t1fisi:t1bpssq:t1pssf1:t1pssf2")
+
+# Plots for moderation
+int <- data1 %>% dplyr::select(id, t1fisi, t1bpssq, t2deval)
+int$id_group <- case_when(int$t1fisi > mean(int$t1fisi)+sd(int$t1fisi) ~ "high",
+            int$t1fisi < mean(int$t1fisi)+sd(int$t1fisi) & int$t1fisi > mean(int$t1fisi)-sd(int$t1fisi) ~ "average", #separates participants into low, average and high team identification
+            int$t1fisi < mean(int$t1fisi)-sd(int$t1fisi) ~ "low")
+int %>% 
+  ggplot() +
+  aes(x = t1bpssq, y = t2deval, group = id_group, color = id_group) + # show effect of social support on devaluation by team identification group
+  geom_point(color = "grey", alpha = .7) +
+    geom_smooth(method = "lm")
+```

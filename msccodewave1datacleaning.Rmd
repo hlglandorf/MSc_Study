@@ -1,0 +1,649 @@
+---
+title: "MSc Study Wave 1 Wrangeling"
+author: "Hanna L Glandorf"
+date: "10 6 2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## MSc Study Data Clean-up Wave 1
+The code here cleans up data that was downloaded from a survey on an online platform. The survey represents the first wave of data for this study.
+
+Objectives are:
+- correct column names in each data file
+- combine data files from the five orders
+- correct coding of each item
+- check internal consistency of each questionnaire
+- compute total scores for each questionnaire
+
+# Load libraries and import data
+```{r read-in}
+library(tidyverse)
+library(ggplot2)
+library(psych) 
+
+
+w1o1 <- readxl::read_excel("wave1order1.xlsx") %>%
+  mutate(id = 1:39)
+w1o2 <- readxl::read_excel("wave1order2.xlsx") %>%
+  mutate(id = 40:76)
+w1o3 <- readxl::read_excel("wave1order3.xlsx") %>%
+  mutate(id = 77:106)
+w1o4 <- readxl::read_excel("wave1order4.xlsx") %>%
+  mutate(id = 107:139)
+w1o5 <- readxl::read_excel("wave1order5.xlsx") %>%
+  mutate(id = 140:176)
+```
+
+# Correct column names 
+To avoid order effects, five version were created on the online platform with different orders of the question (the platform did not allow for randomisation of questionnaires so it was done manually this way).
+So, the column names are corrected to be able to merge the separate tables into one with all the data here.
+
+Order 1 (for reference):
+- Q2 = devaluation
+- Q3 = accomplishments and exhaustion
+- Q4 = PSS (stress)
+- Q5 = SIQS (missing item 4; team identification by dimension)
+- Q6 = BPSSQ (perceived social support)
+- Q7 = FISI (team identification; one dimensional)
+- Q8 = age
+- Q9 = gender
+- Q10 = nationality
+- Q10_a = current residence
+- Q11 = lockdown country
+- Q11_a =whether different from where living before
+- Q12 = who spent lockdown with (6=family, friends, partner, flatmates, colleagues, other, alone)
+- Q13_1 = degree of interactions
+- Q14 = their sport
+- Q15 = competition level
+- Q15_a = length of participation
+- Q16 = impact of covid on sport
+- Q17 = type of effect on training and competition
+- Q18 = consent for reaching out for wave 2
+- Q19 = email
+- Q20 = unique identifier
+- Q21 = further research consent
+```{r correction wave 1}
+w1o1_s <- w1o1 %>% dplyr::select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q3_7, Q3_8, Q3_9, Q3_10, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q4_6, Q4_7, Q4_8, Q4_9, Q4_10, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q5_7, Q5_8, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q6_6, Q7_1, Q7_2, Q7_3, Q7_4, Q8, Q9, Q10, Q10_a, Q11, Q11_a, Q12_0, Q12_1, Q12_2, Q12_3, Q12_4, Q12_5, Q12_6, Q13_1, Q14, Q15, Q15_a, Q15_b, Q16_1, Q17, Q18, Q20, sport_type)
+
+w1o1_s <- w1o1_s %>% rename(deval1w1 = Q2_1, #devaluation items
+                            deval2w1 = Q2_2,
+                            deval3w1 = Q2_3,
+                            deval4w1 = Q2_4,
+                            deval5w1 = Q2_5,
+                            exh1w1 = Q3_2, #exhaustion items
+                            exh2w1 = Q3_3,
+                            exh3w1 = Q3_6,
+                            exh4w1 = Q3_7,
+                            exh5w1 = Q3_8,
+                            accom1w1 = Q3_1, #reduced sense of accomplishment items
+                            accom2w1 = Q3_4,
+                            accom3w1 = Q3_5,
+                            accom4w1 = Q3_9,
+                            accom5w1 = Q3_10,
+                            pss1w1 = Q4_1, #perceived stress items
+                            pss2w1 = Q4_2,
+                            pss3w1 = Q4_3,
+                            pss4w1 = Q4_4,
+                            pss5w1 = Q4_5,
+                            pss6w1 = Q4_6,
+                            pss7w1 = Q4_7,
+                            pss8w1 = Q4_8,
+                            pss9w1 = Q4_9,
+                            pss10w1 = Q4_10,
+                            fisi1w1 = Q7_1, #team identification items
+                            fisi2w1 = Q7_2,
+                            fisi3w1 = Q7_3,
+                            fisi4w1 = Q7_4,
+                            bpssq1w1 = Q6_1, #perceived social support items
+                            bpssq2w1 = Q6_2,
+                            bpssq3w1 = Q6_3,
+                            bpssq4w1 = Q6_4,
+                            bpssq5w1 = Q6_5,
+                            bpssq6w1 = Q6_6,
+                            ties1w1 = Q5_1, #team identification items (different questionnaire, dimension 1)
+                            ties2w1 = Q5_2,
+                            ties3w1 = Q5_3,
+                            centr1w1 = Q5_4, #team identification items (different questionnaire, dimension 2)
+                            centr2w1 = Q5_5,
+                            aff1w1 = Q5_6, #team identification items (different questionnaire, dimension 3)
+                            aff2w1 = Q5_7,
+                            aff3w1 = Q5_8,
+                            age = Q8,
+                            gender = Q9,
+                            nationality = Q10,
+                            residence = Q10_a,
+                            lockdown_residence = Q11,
+                            lockdown_residence_diff = Q11_a,
+                            family = Q12_6,
+                            friends = Q12_5,
+                            partner = Q12_4,
+                            flatmates = Q12_3,
+                            colleagues = Q12_2,
+                            other = Q12_1,
+                            alone = Q12_0,
+                            interactions = Q13_1,
+                            sport = Q14,
+                            complevel = Q15,
+                            plength = Q15_a,
+                            impact = Q16_1,
+                            effect = Q17,
+                            wave2consent = Q18,
+                            u_id = Q20)
+```
+
+Order 2 (for reference):
+- Q2 = PSS
+- Q3 = devaluation
+- Q4 = exhaustion and red accomplishments
+- Q5 = BPSSQ
+- Q6 = SIQS
+- Q7 = FISI
+- Q8 = age
+- Q9 = gender
+- Q10 = nationality
+- Q10_a = current residence
+- Q11 = lockdown country
+- Q11_a =whether different from where living before
+- Q12 = who spent lockdown with (6=family, friends, partner, flatmates, colleagues, other, alone)
+- Q13_1 = degree of interactions
+- Q14 = their sport
+- Q15 = competition level
+- Q15_a = length of participation
+- Q16 = impact of covid on sport
+- Q17 = type of effect on training and competition
+- Q18 = consent for reaching out for wave 2
+- Q19 = email
+- Q20 = unique identifier
+- Q21 = further research consent
+```{r correction wave 2}
+w1o2_s <- w1o2 %>% dplyr::select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q2_6, Q2_7, Q2_8, Q2_9, Q2_10, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q4_6, Q4_7, Q4_8, Q4_9, Q4_10, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q6_6, Q6_7, Q6_8, Q7_1, Q7_2, Q7_3, Q7_4, Q8, Q9, Q10, Q10_a, Q11, Q11_a, Q12_0, Q12_1, Q12_2, Q12_3, Q12_4, Q12_5, Q12_6, Q13_1, Q14, Q15, Q15_a, Q15_b, Q16_1, Q17, Q18, Q20, sport_type)
+
+w1o2_s <- w1o2_s %>% rename(deval1w1 = Q3_1,
+                            deval2w1 = Q3_2,
+                            deval3w1 = Q3_3,
+                            deval4w1 = Q3_4,
+                            deval5w1 = Q3_5,
+                            exh1w1 = Q4_2,
+                            exh2w1 = Q4_3,
+                            exh3w1 = Q4_6,
+                            exh4w1 = Q4_7,
+                            exh5w1 = Q4_8,
+                            accom1w1 = Q4_1,
+                            accom2w1 = Q4_4,
+                            accom3w1 = Q4_5,
+                            accom4w1 = Q4_9,
+                            accom5w1 = Q4_10,
+                            pss1w1 = Q2_1,
+                            pss2w1 = Q2_2,
+                            pss3w1 = Q2_3,
+                            pss4w1 = Q2_4,
+                            pss5w1 = Q2_5,
+                            pss6w1 = Q2_6,
+                            pss7w1 = Q2_7,
+                            pss8w1 = Q2_8,
+                            pss9w1 = Q2_9,
+                            pss10w1 = Q2_10,
+                            fisi1w1 = Q7_1,
+                            fisi2w1 = Q7_2,
+                            fisi3w1 = Q7_3,
+                            fisi4w1 = Q7_4,
+                            bpssq1w1 = Q5_1,
+                            bpssq2w1 = Q5_2,
+                            bpssq3w1 = Q5_3,
+                            bpssq4w1 = Q5_4,
+                            bpssq5w1 = Q5_5,
+                            bpssq6w1 = Q5_6,
+                            ties1w1 = Q6_1,
+                            ties2w1 = Q6_2,
+                            ties3w1 = Q6_3,
+                            centr1w1 = Q6_4,
+                            centr2w1 = Q6_5,
+                            aff1w1 = Q6_6,
+                            aff2w1 = Q6_7,
+                            aff3w1 = Q6_8,
+                            age = Q8,
+                            gender = Q9,
+                            nationality = Q10,
+                            residence = Q10_a,
+                            lockdown_residence = Q11,
+                            lockdown_residence_diff = Q11_a,
+                            family = Q12_6,
+                            friends = Q12_5,
+                            partner = Q12_4,
+                            flatmates = Q12_3,
+                            colleagues = Q12_2,
+                            other = Q12_1,
+                            alone = Q12_0,
+                            interactions = Q13_1,
+                            sport = Q14,
+                            complevel = Q15,
+                            plength = Q15_a,
+                            impact = Q16_1,
+                            effect = Q17,
+                            wave2consent = Q18,
+                            u_id = Q20)
+
+w1o2_s$age <- as.numeric(as.character(w1o2_s$age))
+```
+
+Order 3 (for reference):
+- Q2 = SIQS
+- Q3 = BPSSQ
+- Q4 = devaluation
+- Q5 = red accomplishments and exhaustion
+- Q6 = FISI
+- Q7 = PSS
+- Q8 = age
+- Q9 = gender
+- Q10 = nationality
+- Q10_a = current residence
+- Q11 = lockdown country
+- Q11_a =whether different from where living before
+- Q12 = who spent lockdown with (6=family, friends, partner, flatmates, colleagues, other, alone)
+- Q13_1 = degree of interactions
+- Q14 = their sport
+- Q15 = competition level
+- Q15_a = length of participation
+- Q16 = impact of covid on sport
+- Q17 = type of effect on training and competition
+- Q18 = consent for reaching out for wave 2
+- Q19 = email
+- Q20 = unique identifier
+- Q21 = further research consent
+```{r correction wave 3}
+w1o3_s <- w1o3 %>% dplyr::select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q2_6, Q2_7, Q2_8, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q5_7, Q5_8, Q5_9, Q5_10, Q6_1, Q6_2, Q6_3, Q6_4, Q7_1, Q7_2, Q7_3, Q7_4, Q7_5, Q7_6, Q7_7, Q7_8, Q7_9, Q7_10, Q8, Q9, Q10, Q10_a, Q11, Q11_a, Q12_0, Q12_1, Q12_2, Q12_3, Q12_4, Q12_5, Q12_6, Q13_1, Q14, Q15, Q15_a, Q15_b, Q16_1, Q17, Q18, Q20, sport_type)
+
+w1o3_s <- w1o3_s %>% rename(deval1w1 = Q4_1,
+                            deval2w1 = Q4_2,
+                            deval3w1 = Q4_3,
+                            deval4w1 = Q4_4,
+                            deval5w1 = Q4_5,
+                            exh1w1 = Q5_2,
+                            exh2w1 = Q5_3,
+                            exh3w1 = Q5_6,
+                            exh4w1 = Q5_7,
+                            exh5w1 = Q5_8,
+                            accom1w1 = Q5_1,
+                            accom2w1 = Q5_4,
+                            accom3w1 = Q5_5,
+                            accom4w1 = Q5_9,
+                            accom5w1 = Q5_10,
+                            pss1w1 = Q7_1,
+                            pss2w1 = Q7_2,
+                            pss3w1 = Q7_3,
+                            pss4w1 = Q7_4,
+                            pss5w1 = Q7_5,
+                            pss6w1 = Q7_6,
+                            pss7w1 = Q7_7,
+                            pss8w1 = Q7_8,
+                            pss9w1 = Q7_9,
+                            pss10w1 = Q7_10,
+                            fisi1w1 = Q6_1,
+                            fisi2w1 = Q6_2,
+                            fisi3w1 = Q6_3,
+                            fisi4w1 = Q6_4,
+                            bpssq1w1 = Q3_1,
+                            bpssq2w1 = Q3_2,
+                            bpssq3w1 = Q3_3,
+                            bpssq4w1 = Q3_4,
+                            bpssq5w1 = Q3_5,
+                            bpssq6w1 = Q3_6,
+                            ties1w1 = Q2_1,
+                            ties2w1 = Q2_2,
+                            ties3w1 = Q2_3,
+                            centr1w1 = Q2_4,
+                            centr2w1 = Q2_5,
+                            aff1w1 = Q2_6,
+                            aff2w1 = Q2_7,
+                            aff3w1 = Q2_8,
+                            age = Q8,
+                            gender = Q9,
+                            nationality = Q10,
+                            residence = Q10_a,
+                            lockdown_residence = Q11,
+                            lockdown_residence_diff = Q11_a,
+                            family = Q12_6,
+                            friends = Q12_5,
+                            partner = Q12_4,
+                            flatmates = Q12_3,
+                            colleagues = Q12_2,
+                            other = Q12_1,
+                            alone = Q12_0,
+                            interactions = Q13_1,
+                            sport = Q14,
+                            complevel = Q15,
+                            plength = Q15_a,
+                            impact = Q16_1,
+                            effect = Q17,
+                            wave2consent = Q18,
+                            u_id = Q20)
+
+w1o3_s$age <- as.numeric(as.character(w1o3_s$age))
+```
+
+Order 4 (for reference):
+- Q2 = BPSSQ
+- Q3 = PSS
+- Q4 = FISI
+- Q5 = devaluation
+- Q6 = accom and exhaustion
+- Q7 = SIQS (missing item 4)
+- Q8 = age
+- Q9 = gender
+- Q10 = nationality
+- Q10_a = current residence
+- Q11 = lockdown country
+- Q11_a =whether different from where living before
+- Q12 = who spent lockdown with (6=family, friends, partner, flatmates, colleagues, other, alone)
+- Q13_1 = degree of interactions
+- Q14 = their sport
+- Q15 = competition level
+- Q15_a = length of participation
+- Q16 = impact of covid on sport
+- Q17 = type of effect on training and competition
+- Q18 = consent for reaching out for wave 2
+- Q19 = email
+- Q20 = unique identifier
+- Q21 = further research consent
+```{r correction wave 4}
+w1o4_s <- w1o4 %>% dplyr::select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q2_5, Q2_6, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q3_7, Q3_8, Q3_9, Q3_10, Q4_1, Q4_2, Q4_3, Q4_4, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q6_6, Q6_7, Q6_8, Q6_8, Q6_9, Q6_10, Q7_1, Q7_2, Q7_3, Q7_4, Q7_5, Q7_6, Q7_7, Q7_8, Q8, Q9, Q10, Q10_a, Q11, Q11_a, Q12_0, Q12_1, Q12_2, Q12_3, Q12_4, Q12_5, Q12_6, Q13_1, Q14, Q15, Q15_a, Q15_b, Q16_1, Q17, Q18, Q20, sport_type)
+
+w1o4_s <- w1o4_s %>% rename(deval1w1 = Q5_1,
+                            deval2w1 = Q5_2,
+                            deval3w1 = Q5_3,
+                            deval4w1 = Q5_4,
+                            deval5w1 = Q5_5,
+                            exh1w1 = Q6_2,
+                            exh2w1 = Q6_3,
+                            exh3w1 = Q6_6,
+                            exh4w1 = Q6_7,
+                            exh5w1 = Q6_8,
+                            accom1w1 = Q6_1,
+                            accom2w1 = Q6_4,
+                            accom3w1 = Q6_5,
+                            accom4w1 = Q6_9,
+                            accom5w1 = Q6_10,
+                            pss1w1 = Q3_1,
+                            pss2w1 = Q3_2,
+                            pss4w1 = Q3_4,
+                            pss3w1 = Q3_3,
+                            pss5w1 = Q3_5,
+                            pss6w1 = Q3_6,
+                            pss7w1 = Q3_7,
+                            pss8w1 = Q3_8,
+                            pss9w1 = Q3_9,
+                            pss10w1 = Q3_10,
+                            fisi1w1 = Q4_1,
+                            fisi2w1 = Q4_2,
+                            fisi3w1 = Q4_3,
+                            fisi4w1 = Q4_4,
+                            bpssq1w1 = Q2_1,
+                            bpssq2w1 = Q2_2,
+                            bpssq3w1 = Q2_3,
+                            bpssq4w1 = Q2_4,
+                            bpssq5w1 = Q2_5,
+                            bpssq6w1 = Q2_6,
+                            ties1w1 = Q7_1,
+                            ties2w1 = Q7_2,
+                            ties3w1 = Q7_3,
+                            centr1w1 = Q7_4,
+                            centr2w1 = Q7_5,
+                            aff1w1 = Q7_6,
+                            aff2w1 = Q7_7,
+                            aff3w1 = Q7_8,
+                            age = Q8,
+                            gender = Q9,
+                            nationality = Q10,
+                            residence = Q10_a,
+                            lockdown_residence = Q11,
+                            lockdown_residence_diff = Q11_a,
+                            family = Q12_6,
+                            friends = Q12_5,
+                            partner = Q12_4,
+                            flatmates = Q12_3,
+                            colleagues = Q12_2,
+                            other = Q12_1,
+                            alone = Q12_0,
+                            interactions = Q13_1,
+                            sport = Q14,
+                            complevel = Q15,
+                            plength = Q15_a,
+                            impact = Q16_1,
+                            effect = Q17,
+                            wave2consent = Q18,
+                            u_id = Q20)
+w1o4_s$age <- as.numeric(as.character(w1o4_s$age))
+```
+
+Order 5 (for reference):
+- Q2 = FISI
+- Q3 = BPSSQ
+- Q4 = PSS
+- Q5 = SIQS
+- Q6 = devaluation
+- Q7 = red accomplishment and exhaustion
+- Q8 = age
+- Q9 = gender
+- Q10 = nationality
+- Q10_a = current residence
+- Q11 = lockdown country
+- Q11_a =whether different from where living before
+- Q12 = who spent lockdown with (6=family, friends, partner, flatmates, colleagues, other, alone)
+- Q13_1 = degree of interactions
+- Q14 = their sport
+- Q15 = competition level
+- Q15_a = length of participation
+- Q16 = impact of covid on sport
+- Q17 = type of effect on training and competition
+- Q18 = consent for reaching out for wave 2
+- Q19 = email
+- Q20 = unique identifier
+- Q21 = further research consent
+```{r correction wave 5}
+w1o5_s <- w1o5 %>% dplyr::select(id, Q2_1, Q2_2, Q2_3, Q2_4, Q3_1, Q3_2, Q3_3, Q3_4, Q3_5, Q3_6, Q4_1, Q4_2, Q4_3, Q4_4, Q4_5, Q4_6, Q4_7, Q4_8, Q4_9, Q4_10, Q5_1, Q5_2, Q5_3, Q5_4, Q5_5, Q5_6, Q5_7, Q5_8, Q6_1, Q6_2, Q6_3, Q6_4, Q6_5, Q7_1, Q7_2, Q7_3, Q7_4, Q7_5, Q7_6, Q7_7, Q7_8, Q7_9, Q7_10, Q8, Q9, Q10, Q10_a, Q11, Q11_a, Q12_0, Q12_1, Q12_2, Q12_3, Q12_4, Q12_5, Q12_6, Q13_1, Q14, Q15, Q15_a, Q15_b, Q16_1, Q17, Q18, Q20, sport_type)
+
+w1o5_s <- w1o5_s %>% rename(deval1w1 = Q6_1,
+                            deval2w1 = Q6_2,
+                            deval3w1 = Q6_3,
+                            deval4w1 = Q6_4,
+                            deval5w1 = Q6_5,
+                            exh1w1 = Q7_2,
+                            exh2w1 = Q7_3,
+                            exh3w1 = Q7_6,
+                            exh4w1 = Q7_7,
+                            exh5w1 = Q7_8,
+                            accom1w1 = Q7_1,
+                            accom2w1 = Q7_4,
+                            accom3w1 = Q7_5,
+                            accom4w1 = Q7_9,
+                            accom5w1 = Q7_10,
+                            pss1w1 = Q4_1,
+                            pss2w1 = Q4_2,
+                            pss3w1 = Q4_3,
+                            pss4w1 = Q4_4,
+                            pss5w1 = Q4_5,
+                            pss6w1 = Q4_6,
+                            pss7w1 = Q4_7,
+                            pss8w1 = Q4_8,
+                            pss9w1 = Q4_9,
+                            pss10w1 = Q4_10,
+                            fisi1w1 = Q2_1,
+                            fisi2w1 = Q2_2,
+                            fisi3w1 = Q2_3,
+                            fisi4w1 = Q2_4,
+                            bpssq1w1 = Q3_1,
+                            bpssq2w1 = Q3_2,
+                            bpssq3w1 = Q3_3,
+                            bpssq4w1 = Q3_4,
+                            bpssq5w1 = Q3_5,
+                            bpssq6w1 = Q3_6,
+                            ties1w1 = Q5_1,
+                            ties2w1 = Q5_2,
+                            ties3w1 = Q5_3,
+                            centr1w1 = Q5_4,
+                            centr2w1 = Q5_5,
+                            aff1w1 = Q5_6,
+                            aff2w1 = Q5_7,
+                            aff3w1 = Q5_8,
+                            age = Q8,
+                            gender = Q9,
+                            nationality = Q10,
+                            residence = Q10_a,
+                            lockdown_residence = Q11,
+                            lockdown_residence_diff = Q11_a,
+                            family = Q12_6,
+                            friends = Q12_5,
+                            partner = Q12_4,
+                            flatmates = Q12_3,
+                            colleagues = Q12_2,
+                            other = Q12_1,
+                            alone = Q12_0,
+                            interactions = Q13_1,
+                            sport = Q14,
+                            complevel = Q15,
+                            plength = Q15_a,
+                            impact = Q16_1,
+                            effect = Q17,
+                            wave2consent = Q18,
+                            u_id = Q20)
+w1o5_s$age <- as.numeric(as.character(w1o5_s$age))
+```
+
+# Combining files
+The five datafiles are combined into a single one. 
+```{r combine files}
+datcomb1 <- bind_rows(w1o1_s, w1o2_s, w1o3_s, w1o4_s, w1o5_s)
+```
+
+# Coding correction (e.g., reverse coding)
+```{r}
+#correct the coding
+datcomb1 <- datcomb1 %>% mutate(deval1w1 = recode(deval1w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                deval2w1 = recode(deval2w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                deval3w1 = recode(deval3w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                deval4w1 = recode(deval4w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                deval5w1 = recode(deval5w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                exh1w1 = recode(exh1w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                exh2w1 = recode(exh2w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                exh3w1 = recode(exh3w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                exh4w1 = recode(exh4w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                exh5w1 = recode(exh5w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                accom1w1 = recode(accom1w1, "0" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                accom2w1 = recode(accom2w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                accom3w1 = recode(accom3w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                accom4w1 = recode(accom4w1, "0" = "NA", "5"="0", "4"="1", "3"="2", "2"="3", "1"="4"),
+                accom5w1 = recode(accom5w1, "0" = "NA", "5"="4", "4"="3", "3"="2", "2"="1", "1"="0"),
+                pss1w1 = recode(pss1w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                pss2w1 = recode(pss2w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                pss3w1 = recode(pss3w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                pss6w1 = recode(pss6w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                pss9w1 = recode(pss9w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                pss10w1 = recode(pss10w1, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0),
+                ties1w1 = recode(ties1w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                ties2w1 = recode(ties2w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                ties3w1 = recode(ties3w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                centr1w1 = recode(centr1w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                centr2w1 = recode(centr2w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                aff1w1 = recode(aff1w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                aff2w1 = recode(aff2w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                aff3w1 = recode(aff3w1, "0"=7, "1"=6, "2"=5, "3"=5, "4"=4, "5"=3, "6"=3, "7"=2, "8"=1),
+                bpssq1w1 = recode(bpssq1w1, "0"=5, "1"=4, "2"=3, "3"=2, "4"=1),
+                bpssq2w1 = recode(bpssq2w1, "0"=5, "1"=4, "2"=3, "3"=2, "4"=1),
+                bpssq3w1 = recode(bpssq3w1, "0"=5, "1"=4, "2"=3, "3"=2, "4"=1),
+                bpssq4w1 = recode(bpssq4w1, "0"=5, "1"=4, "2"=3, "3"=2, "4"=1),
+                bpssq5w1 = recode(bpssq5w1, "0"=5, "1"=4, "2"=3, "3"=2, "4"=1),
+                bpssq6w1 = recode(bpssq6w1, "0"=5, "1"=4, "2"=3, "3"=2, "4"=1),
+                fisi1w1 = recode(fisi1w1, "0"=7, "1"=6, "2"=5, "3"=4, "4"=3, "5"=2, "6"=1),
+                fisi2w1 = recode(fisi2w1, "0"=7, "1"=6, "2"=5, "3"=4, "4"=3, "5"=2, "6"=1),
+                fisi3w1 = recode(fisi3w1, "0"=7, "1"=6, "2"=5, "3"=4, "4"=3, "5"=2, "6"=1),
+                fisi4w1 = recode(fisi4w1, "0"=7, "1"=6, "2"=5, "3"=4, "4"=3, "5"=2, "6"=1),
+                gender = recode(gender, "4"="female", "3"="male", "2"="non-b", "1"="other", "0"="NA"),
+                interactions = recode(interactions, "0"=4, "1"=3, "2"=2, "3"=1, "4"=0))
+#convert to numeric
+datcomb1$pss4w1 <- as.numeric(as.character(datcomb1$pss4w1))
+datcomb1$pss5w1 <- as.numeric(as.character(datcomb1$pss5w1))
+datcomb1$pss7w1 <- as.numeric(as.character(datcomb1$pss7w1))
+datcomb1$pss8w1 <- as.numeric(as.character(datcomb1$pss8w1))
+
+datcomb1$exh1w1 <- as.numeric(as.character(datcomb1$exh1w1))
+datcomb1$exh2w1 <- as.numeric(as.character(datcomb1$exh2w1))
+datcomb1$exh3w1 <- as.numeric(as.character(datcomb1$exh3w1))
+datcomb1$exh4w1 <- as.numeric(as.character(datcomb1$exh4w1))
+datcomb1$exh5w1 <- as.numeric(as.character(datcomb1$exh5w1))
+
+datcomb1$accom1w1 <- as.numeric(as.character(datcomb1$accom1w1))
+datcomb1$accom2w1 <- as.numeric(as.character(datcomb1$accom2w1))
+datcomb1$accom3w1 <- as.numeric(as.character(datcomb1$accom3w1))
+datcomb1$accom4w1 <- as.numeric(as.character(datcomb1$accom4w1))
+datcomb1$accom5w1 <- as.numeric(as.character(datcomb1$accom5w1))
+```
+
+# Check internal consistency
+Check the internal consistency of each questionnaire with Cronbach's alpha.
+```{r}
+##pss (Stress)
+pss_alpha <- datcomb1 %>% dplyr::select(pss1w1, pss2w1, pss3w1, pss4w1, pss5w1, pss6w1, pss7w1, pss8w1, pss9w1, pss10w1)
+alpha(pss_alpha[,1:10], check.keys = F)
+
+pss_alphaf1 <- datcomb1 %>% dplyr::select(pss1w1, pss2w1, pss3w1, pss6w1, pss9w1, pss10w1)
+alpha(pss_alphaf1[,1:6], check.keys = F)
+
+pss_alphaf2 <- datcomb1 %>% dplyr::select( pss4w1, pss5w1, pss7w1, pss8w1)
+alpha(pss_alphaf2[,1:4], check.keys = F)
+
+##abq (Burnout)
+deval_alpha <- datcomb1 %>% dplyr::select(deval1w1, deval2w1, deval3w1, deval4w1, deval5w1)
+alpha(deval_alpha[,1:5], check.keys = F)
+
+exh_alpha <- datcomb1 %>% dplyr::select(exh1w1, exh2w1, exh3w1, exh4w1, exh5w1)
+alpha(exh_alpha[,1:5], check.keys = F)
+
+accom_alpha <- datcomb1 %>% dplyr::select(accom2w1, accom3w1, accom4w1)
+alpha(accom_alpha[,1:3], check.keys = F) 
+
+##fisi (Team identification)
+fisi_alpha <- datcomb1 %>% dplyr::select(fisi1w1, fisi2w1, fisi3w1, fisi4w1)
+alpha(fisi_alpha[,1:4], check.keys = F)
+
+##bpssq (Perceived social support)
+bpssq_alpha <- datcomb1 %>% dplyr::select(bpssq1w1, bpssq2w1, bpssq3w1, bpssq4w1, bpssq5w1, bpssq6w1)
+alpha(bpssq_alpha[,1:6], check.keys = F)
+
+##ssiq (Team identification with dimensions)
+ties_alpha <- datcomb1 %>% dplyr::select(ties1w1, ties2w1, ties3w1)
+alpha(ties_alpha[,1:3], check.keys = F)
+
+centr_alpha <- datcomb1 %>% dplyr::select(centr1w1, centr2w1)
+alpha(centr_alpha[,1:2], check.keys = F)
+
+aff_alpha <- datcomb1 %>% dplyr::select(aff1w1, aff2w1, aff3w1)
+alpha(aff_alpha[,1:3], check.keys = F)
+
+#all scales meet reliability
+```
+
+# Compute total scores for each questionnaire
+```{r}
+datcomb1_c <- mutate(datcomb1, t1pss = pss1w1+pss2w1+pss3w1+pss4w1+pss5w1+pss6w1+pss7w1+pss8w1+pss9w1+pss10w1,
+                     t1pssf1 = pss1w1+pss2w1+pss3w1+pss6w1+pss9w1+pss10w1,
+                     t1pssf2 = pss4w1+pss5w1+pss7w1+pss8w1,
+                     t1fisi = fisi1w1+fisi2w1+fisi3w1+fisi4w1,
+                     t1deval = (deval1w1+deval2w1+deval3w1+deval4w1+deval5w1)/5,
+                     t1exh = (exh1w1+exh2w1+exh3w1+exh4w1+exh5w1)/5,
+                     t1accom = (accom1w1+accom2w1+accom3w1+accom4w1+accom5w1)/5,
+                     t1ties = (ties1w1+ties2w1+ties3w1)/3,
+                     t1centr = (centr1w1+centr2w1)/2,
+                     t1aff = (aff1w1+aff2w1+aff3w1)/3,
+                     t1bpssq = bpssq1w1+bpssq2w1+bpssq3w1+bpssq4w1+bpssq5w1+bpssq6w1) ##%>%
+  ##select(id, t1pss, t1fisi, t1deval, t1exh, t1accom, t1ties, t1centr, t1aff, t1bpssq)
+
+```
+
+create cleaned data file
+```{r}
+write.csv(datcomb1_c, file = 'wave1.csv')
+```
